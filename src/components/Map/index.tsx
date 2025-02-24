@@ -1,7 +1,8 @@
 'use client';
+import { RootState } from '@/store/mapStore';
 import { GoogleMap } from '@react-google-maps/api';
-import React, { ReactNode, useState, useEffect } from 'react';
-
+import React, { ReactNode } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 export const defaultMapContainerStyle = {
   width: '100%',
   height: '80vh',
@@ -19,22 +20,19 @@ const defaultMapOptions = {
 };
 interface MapProps {
   children?: ReactNode;
-  center?: google.maps.LatLngLiteral;
 }
-export const Map = ({ children, center }: MapProps) => {
-  const [mapCenter, setMapCenter] = useState(center || defaultMapCenter);
-
-  useEffect(() => {
-    if (center) {
-      setMapCenter(center);
-    }
-  }, [center]);
+export const Map = ({ children }: MapProps) => {
+  const { selectedCity } = useSelector((state: RootState) => state.location);
 
   return (
     <div className='w-full mt-16'>
       <GoogleMap
         mapContainerStyle={defaultMapContainerStyle}
-        center={mapCenter}
+        center={
+          selectedCity
+            ? { lat: selectedCity.lat, lng: selectedCity.lng }
+            : undefined
+        }
         zoom={defaultMapZoom}
         options={defaultMapOptions}
       >

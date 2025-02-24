@@ -3,21 +3,22 @@ import Image from 'next/image';
 import 'primeicons/primeicons.css';
 import CustomButton from '../CustomButton';
 import { Dropdown, DropdownChangeEvent } from 'primereact/dropdown';
-import { useState } from 'react';
+import { RootState } from '@/store/mapStore';
+import { setSelectedCity } from '@/slices/locationSlice';
+import { useDispatch, useSelector } from 'react-redux';
 
-interface City {
-  name: string;
-  code: string;
-}
 const Navbar = () => {
-  const [selectedCity, setSelectedCity] = useState<City | null>(null);
-  const cities: City[] = [
-    { name: 'New York', code: 'NY' },
-    { name: 'Rome', code: 'RM' },
-    { name: 'London', code: 'LDN' },
-    { name: 'Istanbul', code: 'IST' },
-    { name: 'Paris', code: 'PRS' },
+  const dispatch = useDispatch();
+  const { selectedCity, userLocation, cities } = useSelector(
+    (state: RootState) => state.location
+  );
+  const cityOptions = [
+    ...(userLocation ? [userLocation] : []),
+    ...cities.filter((city) => city.name !== userLocation?.name),
   ];
+  const handleCityChange = (e: DropdownChangeEvent) => {
+    dispatch(setSelectedCity(e.value));
+  };
   return (
     <nav
       className='flex justify-between items-center px-12 h-16 bg-white text-black shadow-sm fixed top-0 left-0 w-full z-50'
@@ -30,11 +31,11 @@ const Navbar = () => {
         <i className='pi pi-map-marker text-gray-600'></i>
         <Dropdown
           value={selectedCity}
-          onChange={(e: DropdownChangeEvent) => setSelectedCity(e.value)}
-          options={cities}
+          onChange={handleCityChange}
+          options={cityOptions}
           optionLabel='name'
-          placeholder='Berlin, Germany'
-          className=' w-40 border-none shadow-none justify-between text-black font-medium focus:ring-0 focus:outline-none flex items-center'
+          placeholder='Select a city'
+          className=' w-40 border-none shadow-none justify-between text-black font-medium focus:ring-0 focus:outline-none flex items-center truncate'
           panelClassName='bg-white rounded-lg shadow-lg border border-gray-200 cursor-pointer p-4'
           dropdownIcon={<i className='pi pi-chevron-down text-gray-500'></i>}
         />

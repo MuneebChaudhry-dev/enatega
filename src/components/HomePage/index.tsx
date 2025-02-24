@@ -7,7 +7,9 @@ import {
 } from 'primereact/autocomplete';
 import { Button } from 'primereact/button';
 import CustomButton from '../common/CustomButton';
-
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '@/store/mapStore';
+import { setUserLocation, setSelectedCity } from '@/slices/locationSlice';
 declare global {
   interface Window {
     google: typeof google;
@@ -15,6 +17,10 @@ declare global {
 }
 
 export default function HomePage() {
+  const dispatch = useDispatch();
+  const { selectedCity, userLocation } = useSelector(
+    (state: RootState) => state.location
+  );
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [userLatLng, setUserLatLng] = useState<{
@@ -81,31 +87,35 @@ export default function HomePage() {
 
   const handleChange = async (e: { value: string }) => {
     const address = e.value;
-    setQuery(address);
 
     const coordinates = await getCoordinates(address);
     if (coordinates) {
-      setUserLatLng(coordinates);
+      dispatch(
+        setSelectedCity({
+          name: address,
+          lat: coordinates.lat,
+          lng: coordinates.lng,
+        })
+      );
+      dispatch(
+        setUserLocation({
+          name: address,
+          lat: coordinates.lat,
+          lng: coordinates.lng,
+        })
+      );
     }
   };
-
   const handleShareLocation = () => {
     if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          setUserLatLng({ lat, lng });
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
 
-          const address = await reverseGeocode(lat, lng);
-          setQuery(address);
-        },
-        (error) => {
-          console.error('Error getting user location:', error);
-        }
-      );
-    } else {
-      alert('Geolocation is not supported by your browser.');
+        const address = await reverseGeocode(lat, lng);
+        dispatch(setUserLocation({ name: address, lat, lng }));
+        dispatch(setSelectedCity({ name: address, lat, lng }));
+      });
     }
   };
 
@@ -130,7 +140,7 @@ export default function HomePage() {
 
   return (
     <div className='mt-16'>
-      <Map center={userLatLng || undefined}>
+      <Map>
         <div className='w-full flex justify-center'>
           <div
             className='flex flex-col md:flex-row items-center gap-2 md:gap-4 
@@ -146,7 +156,7 @@ export default function HomePage() {
                   loadingIcon={
                     <i className='pi pi-spinner animate-spin text-gray-800 text-xl absolute right-3 top-1/2 -translate-y-1/2'></i>
                   }
-                  value={query}
+                  value={selectedCity?.name || query}
                   suggestions={suggestions}
                   completeMethod={handleCompleteMethod}
                   onChange={handleChange}
