@@ -10,6 +10,8 @@ import CustomButton from '../common/CustomButton';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/mapStore';
 import { setUserLocation, setSelectedCity } from '@/slices/locationSlice';
+import { useLazyQuery, useQuery } from '@apollo/client';
+import { GET_RESTAURANTS } from '@/api/query';
 declare global {
   interface Window {
     google: typeof google;
@@ -36,6 +38,21 @@ export default function HomePage() {
       autocompleteServiceRef.current =
         new window.google.maps.places.AutocompleteService();
     }
+  };
+  const [getRestaurants, { data, loading, error }] =
+    useLazyQuery(GET_RESTAURANTS);
+  const handleFindRestaurants = () => {
+    if (!selectedCity) {
+      alert('Please select a city first!');
+      return;
+    }
+
+    getRestaurants({
+      variables: {
+        latitude: selectedCity.lat,
+        longitude: selectedCity.lng,
+      },
+    });
   };
 
   const handleCompleteMethod = async (event: AutoCompleteCompleteEvent) => {
@@ -134,10 +151,6 @@ export default function HomePage() {
     return `Lat: ${lat}, Lng: ${lng}`;
   };
 
-  const handleFindRestaurants = () => {
-    alert(`Finding restaurants near: ${query}`);
-  };
-
   return (
     <div className='mt-16'>
       <Map>
@@ -182,6 +195,13 @@ export default function HomePage() {
           </div>
         </div>
       </Map>
+      <div className='mt-16'>
+        {loading && <p>Loading...</p>}
+        {error && <p>Error fetching restaurants</p>}
+        {data?.nearByRestaurants?.restaurants?.map((restaurant) => (
+          <p key={restaurant._id}>{restaurant.name}</p>
+        ))}
+      </div>
     </div>
   );
 }

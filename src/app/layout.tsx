@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Poppins } from 'next/font/google';
 import { PrimeReactProvider } from 'primereact/api';
 import { ReduxProvider } from '@/providers/redux-provider';
+import { ApolloProvider } from '@/providers/apollo-provider';
 import './globals.css';
 
 const poppins = Poppins({
@@ -25,11 +26,13 @@ export default function RootLayout({
     <html lang='en'>
       <body className={`${poppins.className}  antialiased`}>
         {' '}
-        <ReduxProvider>
-          <PrimeReactProvider value={{ unstyled: true, pt: {} }}>
-            {children}
-          </PrimeReactProvider>
-        </ReduxProvider>
+        <ApolloProvider>
+          <ReduxProvider>
+            <PrimeReactProvider value={{ unstyled: true, pt: {} }}>
+              {children}
+            </PrimeReactProvider>
+          </ReduxProvider>
+        </ApolloProvider>
       </body>
     </html>
   );

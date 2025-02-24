@@ -2,7 +2,7 @@
 import { RootState } from '@/store/mapStore';
 import { GoogleMap } from '@react-google-maps/api';
 import React, { ReactNode } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 export const defaultMapContainerStyle = {
   width: '100%',
   height: '80vh',
@@ -31,7 +31,7 @@ export const Map = ({ children }: MapProps) => {
         center={
           selectedCity
             ? { lat: selectedCity.lat, lng: selectedCity.lng }
-            : undefined
+            : defaultMapCenter
         }
         zoom={defaultMapZoom}
         options={defaultMapOptions}
