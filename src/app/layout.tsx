@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Poppins } from 'next/font/google';
 import { PrimeReactProvider } from 'primereact/api';
-import Tailwind from 'primereact/passthrough/tailwind';
 import './globals.css';
 
 const poppins = Poppins({
@@ -25,7 +24,7 @@ export default function RootLayout({
     <html lang='en'>
       <body className={`${poppins.className}  antialiased`}>
         {' '}
-        <PrimeReactProvider value={{ unstyled: true, pt: Tailwind }}>
+        <PrimeReactProvider value={{ unstyled: true, pt: {} }}>
           {children}
         </PrimeReactProvider>
       </body>

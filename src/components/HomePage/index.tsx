@@ -6,10 +6,11 @@ import {
   AutoCompleteCompleteEvent,
 } from 'primereact/autocomplete';
 import { Button } from 'primereact/button';
+import CustomButton from '../common/CustomButton';
 
 declare global {
   interface Window {
-    google: any;
+    google: typeof google;
   }
 }
 
@@ -78,7 +79,7 @@ export default function HomePage() {
     });
   };
 
-  const handleChange = async (e: any) => {
+  const handleChange = async (e: { value: string }) => {
     const address = e.value;
     setQuery(address);
 
@@ -137,26 +138,35 @@ export default function HomePage() {
                           absolute z-10 top-1/2 left-1/2 
                           transform -translate-x-1/2 -translate-y-1/2'
           >
-            <AutoComplete
-              className='w-64 md:w-80 text-black'
-              value={query}
-              suggestions={suggestions}
-              completeMethod={handleCompleteMethod}
-              onChange={handleChange}
-              placeholder='Enter Delivery Address'
-            />
+            <div className='flex bg-white items-center justify-between rounded-lg px-2 py-2'>
+              <div className='relative w-80'>
+                <AutoComplete
+                  inputClassName='w-80 border-none focus:ring-0 focus:outline-none text-black font-medium pr-10 '
+                  panelClassName='w-80 bg-white rounded-lg shadow-lg border border-gray-200 cursor-pointer p-4'
+                  loadingIcon={
+                    <i className='pi pi-spinner animate-spin text-gray-800 text-xl absolute right-3 top-1/2 -translate-y-1/2'></i>
+                  }
+                  value={query}
+                  suggestions={suggestions}
+                  completeMethod={handleCompleteMethod}
+                  onChange={handleChange}
+                  placeholder='Enter Delivery Address'
+                />
+              </div>
 
-            <Button
-              label='Share Location'
-              icon='pi pi-map-marker'
-              className='p-button-outlined p-button-warning'
-              onClick={handleShareLocation}
-            />
+              <Button
+                label='Share Location'
+                icon='pi pi-expand'
+                iconPos='left'
+                className='text-black text-sm font-medium bg-white text-nowrap flex items-center gap-2'
+                onClick={handleShareLocation}
+              />
+            </div>
 
-            <Button
+            <CustomButton
               label='Find Restaurants'
               icon='pi pi-search'
-              className='p-button-success'
+              className='text-nowrap'
               onClick={handleFindRestaurants}
             />
           </div>
