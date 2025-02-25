@@ -7,11 +7,13 @@ import {
 } from 'primereact/autocomplete';
 import { Button } from 'primereact/button';
 import CustomButton from '../common/CustomButton';
+import { Card } from 'primereact/card';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/mapStore';
 import { setUserLocation, setSelectedCity } from '@/slices/locationSlice';
-import { useLazyQuery, useQuery } from '@apollo/client';
+import { useLazyQuery } from '@apollo/client';
 import { GET_RESTAURANTS } from '@/api/query';
+import { Rating } from 'primereact/rating';
 declare global {
   interface Window {
     google: typeof google;
@@ -20,15 +22,9 @@ declare global {
 
 export default function HomePage() {
   const dispatch = useDispatch();
-  const { selectedCity, userLocation } = useSelector(
-    (state: RootState) => state.location
-  );
+  const { selectedCity } = useSelector((state: RootState) => state.location);
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [userLatLng, setUserLatLng] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
 
   const autocompleteServiceRef =
     useRef<google.maps.places.AutocompleteService | null>(null);
@@ -152,56 +148,88 @@ export default function HomePage() {
   };
 
   return (
-    <div className='mt-16'>
-      <Map>
-        <div className='w-full flex justify-center'>
-          <div
-            className='flex flex-col md:flex-row items-center gap-2 md:gap-4 
+    <>
+      <section className='mt-16'>
+        <Map>
+          <div className='w-full flex justify-center'>
+            <div
+              className='flex flex-col md:flex-row items-center gap-2 md:gap-4 
                           bg-gray-800 text-white px-4 py-3 rounded-lg 
                           absolute z-10 top-1/2 left-1/2 
                           transform -translate-x-1/2 -translate-y-1/2'
-          >
-            <div className='flex bg-white items-center justify-between rounded-lg px-2 py-2'>
-              <div className='relative w-80'>
-                <AutoComplete
-                  inputClassName='w-80 border-none focus:ring-0 focus:outline-none text-black font-medium pr-10 '
-                  panelClassName='w-80 bg-white rounded-lg shadow-lg border border-gray-200 cursor-pointer p-4'
-                  loadingIcon={
-                    <i className='pi pi-spinner animate-spin text-gray-800 text-xl absolute right-3 top-1/2 -translate-y-1/2'></i>
-                  }
-                  value={selectedCity?.name || query}
-                  suggestions={suggestions}
-                  completeMethod={handleCompleteMethod}
-                  onChange={handleChange}
-                  placeholder='Enter Delivery Address'
+            >
+              <div className='flex bg-white items-center justify-between rounded-lg px-2 py-2'>
+                <div className='relative w-80'>
+                  <AutoComplete
+                    inputClassName='w-80 border-none focus:ring-0 focus:outline-none text-black font-medium pr-10 '
+                    panelClassName='w-80 bg-white rounded-lg shadow-lg border border-gray-200 cursor-pointer p-4'
+                    loadingIcon={
+                      <i className='pi pi-spinner animate-spin text-gray-800 text-xl absolute right-3 top-1/2 -translate-y-1/2'></i>
+                    }
+                    value={selectedCity?.name || query}
+                    suggestions={suggestions}
+                    completeMethod={handleCompleteMethod}
+                    onChange={handleChange}
+                    placeholder='Enter Delivery Address'
+                  />
+                </div>
+
+                <Button
+                  label='Share Location'
+                  icon='pi pi-expand'
+                  iconPos='left'
+                  className='text-black text-sm font-medium bg-white text-nowrap flex items-center gap-2'
+                  onClick={handleShareLocation}
                 />
               </div>
 
-              <Button
-                label='Share Location'
-                icon='pi pi-expand'
-                iconPos='left'
-                className='text-black text-sm font-medium bg-white text-nowrap flex items-center gap-2'
-                onClick={handleShareLocation}
+              <CustomButton
+                label='Find Restaurants'
+                icon='pi pi-search'
+                className='text-nowrap'
+                onClick={handleFindRestaurants}
               />
             </div>
-
-            <CustomButton
-              label='Find Restaurants'
-              icon='pi pi-search'
-              className='text-nowrap'
-              onClick={handleFindRestaurants}
-            />
           </div>
-        </div>
-      </Map>
-      <div className='mt-16'>
+        </Map>
+      </section>
+      <section className='py-8'>
+        <h2 className='text-3xl text-center font-bold mb-8'>
+          Restaurants Near You
+        </h2>
         {loading && <p>Loading...</p>}
         {error && <p>Error fetching restaurants</p>}
-        {data?.nearByRestaurants?.restaurants?.map((restaurant) => (
-          <p key={restaurant._id}>{restaurant.name}</p>
-        ))}
-      </div>
-    </div>
+        <div className='w-full grid grid-cols-4 px-10 gap-4'>
+          {data?.nearByRestaurants?.restaurants?.map((restaurant: any) => (
+            <div key={restaurant._id} className=''>
+              <Card
+                title={restaurant.name}
+                subTitle={restaurant.address}
+                className='md:w-25rem bg-slate-800 text-white rounded-xl text-center p-2 min-h-60'
+                footer={
+                  <div className='flex justify-center mt-6'>
+                    <Rating
+                      value={restaurant.rating}
+                      readOnly
+                      cancel={false}
+                      className='flex'
+                    />
+                  </div>
+                }
+                header={
+                  <img
+                    className='rounded-lg mx-auto'
+                    alt={restaurant.name}
+                    src={restaurant.image}
+                    width={200}
+                    height={144}
+                  />
+                }
+              ></Card>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }
