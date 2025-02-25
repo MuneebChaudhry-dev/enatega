@@ -7,13 +7,18 @@ import {
 } from 'primereact/autocomplete';
 import { Button } from 'primereact/button';
 import CustomButton from '../common/CustomButton';
-import { Card } from 'primereact/card';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/mapStore';
 import { setUserLocation, setSelectedCity } from '@/slices/locationSlice';
 import { useLazyQuery } from '@apollo/client';
 import { GET_RESTAURANTS } from '@/api/query';
-import { Rating } from 'primereact/rating';
+import NearbyRestaurants from '../NearbyRestaurants';
+import {
+  initAutocompleteService,
+  getCoordinates,
+  reverseGeocode,
+} from '@/utils/helperFn';
+
 declare global {
   interface Window {
     google: typeof google;
@@ -25,126 +30,73 @@ export default function HomePage() {
   const { selectedCity } = useSelector((state: RootState) => state.location);
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
-
   const autocompleteServiceRef =
     useRef<google.maps.places.AutocompleteService | null>(null);
+  const restaurantsSectionRef = useRef<HTMLElement | null>(null);
 
-  const initAutocompleteService = () => {
-    if (!autocompleteServiceRef.current && window.google) {
-      autocompleteServiceRef.current =
-        new window.google.maps.places.AutocompleteService();
-    }
-  };
   const [getRestaurants, { data, loading, error }] =
     useLazyQuery(GET_RESTAURANTS);
+
   const handleFindRestaurants = () => {
     if (!selectedCity) {
       alert('Please select a city first!');
       return;
     }
-
     getRestaurants({
-      variables: {
-        latitude: selectedCity.lat,
-        longitude: selectedCity.lng,
-      },
+      variables: { latitude: selectedCity.lat, longitude: selectedCity.lng },
     });
+    setTimeout(() => {
+      restaurantsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 500);
   };
 
   const handleCompleteMethod = async (event: AutoCompleteCompleteEvent) => {
     const { query } = event;
     setQuery(query);
+    if (!query.trim()) return setSuggestions([]);
+    initAutocompleteService(autocompleteServiceRef);
 
-    if (!query.trim().length) {
-      setSuggestions([]);
-      return;
-    }
-
-    initAutocompleteService();
-
-    if (!autocompleteServiceRef.current) {
-      setSuggestions([`Mock result for: ${query}`]);
-      return;
-    }
-
-    autocompleteServiceRef.current.getPlacePredictions(
+    autocompleteServiceRef.current?.getPlacePredictions(
       { input: query },
-      async (
-        predictions: google.maps.places.AutocompletePrediction[] | null
-      ) => {
-        if (predictions) {
-          const results = predictions.map((p) => p.description);
-          setSuggestions(results);
-        } else {
-          setSuggestions([]);
-        }
+      (predictions) => {
+        setSuggestions(
+          predictions ? predictions.map((p) => p.description) : []
+        );
       }
     );
   };
 
-  const getCoordinates = async (address: string) => {
-    if (!window.google) return;
-
-    const geocoder = new window.google.maps.Geocoder();
-    return new Promise<{ lat: number; lng: number } | null>((resolve) => {
-      geocoder.geocode({ address }, (results, status) => {
-        if (status === 'OK' && results && results.length > 0) {
-          const location = results[0].geometry.location;
-          resolve({ lat: location.lat(), lng: location.lng() });
-        } else {
-          resolve(null);
-        }
-      });
-    });
-  };
-
   const handleChange = async (e: { value: string }) => {
-    const address = e.value;
-
-    const coordinates = await getCoordinates(address);
+    const coordinates = await getCoordinates(e.value);
     if (coordinates) {
-      dispatch(
-        setSelectedCity({
-          name: address,
-          lat: coordinates.lat,
-          lng: coordinates.lng,
-        })
-      );
-      dispatch(
-        setUserLocation({
-          name: address,
-          lat: coordinates.lat,
-          lng: coordinates.lng,
-        })
-      );
+      dispatch(setSelectedCity({ name: e.value, ...coordinates }));
+      dispatch(setUserLocation({ name: e.value, ...coordinates }));
     }
   };
+
   const handleShareLocation = () => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(async (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-
-        const address = await reverseGeocode(lat, lng);
-        dispatch(setUserLocation({ name: address, lat, lng }));
-        dispatch(setSelectedCity({ name: address, lat, lng }));
+        const address = await reverseGeocode(
+          position.coords.latitude,
+          position.coords.longitude
+        );
+        dispatch(
+          setUserLocation({
+            name: address,
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          })
+        );
+        dispatch(
+          setSelectedCity({
+            name: address,
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          })
+        );
       });
     }
-  };
-
-  const reverseGeocode = async (lat: number, lng: number) => {
-    console.log('lat', lat, 'lng', lng);
-    try {
-      const geocoder = new window.google.maps.Geocoder();
-      const response = await geocoder.geocode({ location: { lat, lng } });
-      if (response.results && response.results.length > 0) {
-        return response.results[0].formatted_address;
-      }
-    } catch (err) {
-      console.error('Reverse geocode error:', err);
-    }
-
-    return `Lat: ${lat}, Lng: ${lng}`;
   };
 
   return (
@@ -152,83 +104,43 @@ export default function HomePage() {
       <section className='mt-16'>
         <Map>
           <div className='w-full flex justify-center'>
-            <div
-              className='flex flex-col md:flex-row items-center gap-2 md:gap-4 
-                          bg-gray-800 text-white px-4 py-3 rounded-lg 
-                          absolute z-10 top-1/2 left-1/2 
-                          transform -translate-x-1/2 -translate-y-1/2'
-            >
+            <div className='flex flex-col md:flex-row items-center gap-4 bg-gray-800 text-white px-4 py-3 rounded-lg absolute z-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2'>
               <div className='flex bg-white items-center justify-between rounded-lg px-2 py-2'>
-                <div className='relative w-80'>
-                  <AutoComplete
-                    inputClassName='w-80 border-none focus:ring-0 focus:outline-none text-black font-medium pr-10 '
-                    panelClassName='w-80 bg-white rounded-lg shadow-lg border border-gray-200 cursor-pointer p-4'
-                    loadingIcon={
-                      <i className='pi pi-spinner animate-spin text-gray-800 text-xl absolute right-3 top-1/2 -translate-y-1/2'></i>
-                    }
-                    value={selectedCity?.name || query}
-                    suggestions={suggestions}
-                    completeMethod={handleCompleteMethod}
-                    onChange={handleChange}
-                    placeholder='Enter Delivery Address'
-                  />
-                </div>
-
+                <AutoComplete
+                  inputClassName='w-80 border-none focus:ring-0 focus:outline-none text-black font-medium pr-10'
+                  panelClassName='w-80 bg-white rounded-lg shadow-lg border border-gray-200 cursor-pointer p-4'
+                  value={selectedCity?.name || query}
+                  suggestions={suggestions}
+                  completeMethod={handleCompleteMethod}
+                  onChange={handleChange}
+                  placeholder='Enter Delivery Address'
+                />
                 <Button
                   label='Share Location'
                   icon='pi pi-expand'
-                  iconPos='left'
                   className='text-black text-sm font-medium bg-white text-nowrap flex items-center gap-2'
                   onClick={handleShareLocation}
                 />
               </div>
-
               <CustomButton
+                className='text-nowrap'
                 label='Find Restaurants'
                 icon='pi pi-search'
-                className='text-nowrap'
                 onClick={handleFindRestaurants}
               />
             </div>
           </div>
         </Map>
       </section>
-      <section className='py-8'>
+      <section className='py-8' ref={restaurantsSectionRef}>
         <h2 className='text-3xl text-center font-bold mb-8'>
           Restaurants Near You
         </h2>
-        {loading && <p>Loading...</p>}
-        {error && <p>Error fetching restaurants</p>}
-        <div className='w-full grid grid-cols-4 px-10 gap-4'>
-          {data?.nearByRestaurants?.restaurants?.map((restaurant: any) => (
-            <div key={restaurant._id} className=''>
-              <Card
-                title={restaurant.name}
-                subTitle={restaurant.address}
-                className='md:w-25rem bg-slate-800 text-white rounded-xl text-center p-2 min-h-60'
-                footer={
-                  <div className='flex justify-center mt-6'>
-                    <Rating
-                      value={restaurant.rating}
-                      readOnly
-                      cancel={false}
-                      className='flex'
-                    />
-                  </div>
-                }
-                header={
-                  <img
-                    className='rounded-lg mx-auto'
-                    alt={restaurant.name}
-                    src={restaurant.image}
-                    width={200}
-                    height={144}
-                  />
-                }
-              ></Card>
-            </div>
-          ))}
-        </div>
+        <NearbyRestaurants
+          restaurants={data?.nearByRestaurants?.restaurants || []}
+          loading={loading}
+          error={!!error}
+        />
       </section>
     </>
   );
